@@ -3,7 +3,7 @@
         
         
         function getLowestLoadElevator(elevators){
-            var lowest;
+            var lowest = elevators[0];
             var lowscore = 1.0;
             elevators.forEach(function(elevator){
                 if (elevator.loadFactor() < lowscore){
@@ -18,16 +18,58 @@
             return array.indexOf(value) > -1;
         }
         
-        function getNearestElevator(elevators, floorNum){
-            var difference = 100;
+        function getBestElevatorOLD(elevators, floorNum){
+            //var difference = 100;
+            var difference = elevators[0].currentFloor() - floorNum;
             var closest = elevators[0];
             elevators.forEach(function(elevator){
-                if (Math.abs(elevator.currentFloor() - floorNum) < difference){
+                if (Math.abs(elevator.currentFloor() - floorNum) < difference && elevator.destinationQueue.length < 4 ){
                     difference = Math.abs(elevator.currentFloor() - floorNum)
                     closest = elevator;
                 }
             })
             return closest;
+        }
+        
+        // getBestElevator 2.0
+        function getBestElevator(elevators,floorNum) {
+            
+            var elevatorDict = {};
+            
+            // Default elevator
+            best = elevators[0];
+            
+            elevators.forEach( function(elevator) {
+                
+                // Only choose non-full elevators 
+                if (elevator.loadFactor() < 1) {
+                    
+                    // create a dict where k = elevator object and v = weight
+                    elevatorDict[elevator] = elevator.destinationQueue.length + 
+                                (Math.abs(floorNum - elevator.currentFloor()));
+                }
+            });
+            
+            elevators.forEach( function(elevator) {
+               
+               // Compare the weight of each elevator and select the best
+               if (elevatorDict[elevator] < elevatorDict[best]) {
+                   best = elevator;
+               }
+                
+            });
+            
+            return best;
+            
+        }
+        
+        function updateDestinationQueues(elevators, elevator, floorNum){
+            elevators.forEach( function(e){
+                if (e != elevator && e.destinationQueue.indexOf(floorNum) > -1){
+                    var index = e.destinationQueue.indexOf(floorNum);
+                    e.destinationQueue.splice(index, 1);
+                }
+            });
         }
 
         
@@ -36,9 +78,14 @@
                     elevator.goToFloor(floorNum); 
             });
             elevator.on("passing_floor", function(floorNum){
-                if(isInArray(floorNum, elevator.destinationQueue)){
-                   elevator.goToFloor(floorNum);
+                if(isInArray(floorNum, elevator.destinationQueue) && elevator.loadFactor() < 1){
+                   elevator.goToFloor(floorNum, true);
+                   elevator.checkDestinationQueue();
+                   updateDestinationQueues(elevators,elevator,floorNum);
                 }
+                
+                elevators.foreach
+                
             });
             elevator.on("idle", function() {
                 elevator.goToFloor(0);
@@ -57,10 +104,8 @@
         
         floors.forEach(function(floor) {
             floor.on("up_button_pressed down_button_pressed", function() {
-                var elevator = getNearestElevator(elevators);
-                if (elevator.destinationQueue.length < 3){
-                    elevator.goToFloor(floor.level)    
-                }
+                var elevator = getBestElevator(elevators, floor.floorNum());
+                elevator.goToFloor(floor.floorNum());
             }); 
         });
         
