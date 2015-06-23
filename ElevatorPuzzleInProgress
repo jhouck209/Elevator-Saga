@@ -1,0 +1,70 @@
+{
+    init: function(elevators, floors) {
+        
+        
+        function getLowestLoadElevator(elevators){
+            var lowest;
+            var lowscore = 1.0;
+            elevators.forEach(function(elevator){
+                if (elevator.loadFactor() < lowscore){
+                    lowscore = elevator.loadFactor();
+                    lowest = elevator;
+                }   
+            })
+            return lowest;
+        }
+        
+        function isInArray(value, array){
+            return array.indexOf(value) > -1;
+        }
+        
+        function getNearestElevator(elevators, floorNum){
+            var difference = 100;
+            var closest = elevators[0];
+            elevators.forEach(function(elevator){
+                if (Math.abs(elevator.currentFloor() - floorNum) < difference){
+                    difference = Math.abs(elevator.currentFloor() - floorNum)
+                    closest = elevator;
+                }
+            })
+            return closest;
+        }
+
+        
+        elevators.forEach(function(elevator){
+            elevator.on("floor_button_pressed", function(floorNum) {
+                    elevator.goToFloor(floorNum); 
+            });
+            elevator.on("passing_floor", function(floorNum){
+                if(isInArray(floorNum, elevator.destinationQueue)){
+                   elevator.goToFloor(floorNum);
+                }
+            });
+            elevator.on("idle", function() {
+                elevator.goToFloor(0);
+            });
+        });
+        
+        /*floors.forEach(function(floor) {
+            floor.on("up_button_pressed down_button_pressed", function() {
+                var elevator = elevators[1];
+                if (elevator.destinationQueue.length < 3){
+                    elevator.goToFloor(floor.level);
+                }
+            }); 
+        });*/
+        
+        
+        floors.forEach(function(floor) {
+            floor.on("up_button_pressed down_button_pressed", function() {
+                var elevator = getNearestElevator(elevators);
+                if (elevator.destinationQueue.length < 3){
+                    elevator.goToFloor(floor.level)    
+                }
+            }); 
+        });
+        
+    },
+        update: function(dt, elevators, floors) {
+        }
+}
